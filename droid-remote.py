@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #------------------------------
 # droid-remote
@@ -21,7 +21,6 @@
 # Boston, MA 02111-1307, USA.
 
 import os.path
-import re
 import time
 import pyglet
 import subprocess
@@ -30,7 +29,7 @@ from pyglet.window import key
 adb_path = ""
 tmp_img_path = "tmp"
 tmp_img = "screen.png"
-width = 360
+width = 360#PC display size, not phone screen size
 height = 640
 
 # these are some but not all avaible keycode 
@@ -190,9 +189,13 @@ class DroidRemote(pyglet.window.Window):
 				cmd = "%sadb shell input touchscreen swipe %d %d %d %d" % (adb_path, self.mx, self.my, x, y)
 				print(f"swipe {self.mx} {self.my} {x} {y}")				
 				subprocess.call(cmd, shell=True)	
+		elif button == pyglet.window.mouse.RIGHT:#return
+			subprocess.call(f'{adb_path}adb shell input keyevent KEYCODE_BACK',shell=True)
+			print('Back')
+
 	def on_mouse_scroll(self,x,y,buttonm,modifiers):
 		subprocess.call(f'{adb_path}adb shell input roll {0} {-modifiers*3}',shell=True)
-		print('scroll up' if modifiers<0 else 'scroll down')
+		print('scroll down' if modifiers<0 else 'scroll up')
 
 	def on_mouse_drag(self,x, y, dx, dy, button, modifiers):
 		pass
@@ -200,7 +203,7 @@ class DroidRemote(pyglet.window.Window):
 	def on_key_press(self, symbol, modifiers):
 		cmd = "%sadb shell input keyevent %s" % (adb_path, key_codes[symbol])
 		subprocess.call(cmd, shell=True)	
-		print(f'send keyevent {key_codes[symbol]}')
+		print(f'{key_codes[symbol]}')
 		if not key_codes.has_key(symbol):
 			print(f"unknown key code, {symbol}")
 	
@@ -228,18 +231,16 @@ class DroidRemote(pyglet.window.Window):
 		f = open("%s/%s" % (pyglet.resource.path[0], tmp_img), 'wb')
 		f.write(adb_img_data.replace(b"\r\r\n",b"\n"))
 		f.close()
-		if self.image:del self.image
 		self.image = pyglet.resource.image(tmp_img,atlas=False)#avoid memory usage keep growing
 		self.andwidth = self.image.width
 		self.andheight = self.image.height
 		self.image.width=width
 		self.image.height=height
 		self.clear_cache(tmp_img)		
-		cmd = adb_path + "adb shell dumpsys input "#| grep 'SurfaceOrientation' | awk '{ print $2 }'
+		cmd = adb_path + "adb shell \"dumpsys input | grep 'SurfaceOrientation' | awk '{ print $2 }'\""
 		adb_orientation = subprocess.check_output(cmd, shell=True)
 		#adb_orientation.split(b"\n")
-		ori = re.search('SurfaceOrientation: (\d+)',adb_orientation.decode()).group(1)
-		self.orientation = int(ori)
+		self.orientation = int(adb_orientation.decode())
 		
 
 	def clear_cache(self, filename):
@@ -249,11 +250,13 @@ class DroidRemote(pyglet.window.Window):
 if __name__ == "__main__":
 	cmd = adb_path + "adb devices"
 	try:
-		subprocess.check_output(cmd, shell=True)
+		init_check = subprocess.check_output(cmd, shell=True)
 	except subprocess.CalledProcessError:
 		print("Error trying to run adb - Is it in your path?")
-		exit(1)		
-	
+		exit(1)	
+	if len(init_check.decode().split('\n')[1].strip())==0:
+		print('no device found')
+		exit(1)
 	#window.update_image('')
 	pyglet.resource.path = [tmp_img_path]
 	pyglet.resource.reindex()
