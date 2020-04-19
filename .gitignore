@@ -1,0 +1,7 @@
+adb.exe
+AdbWinApi.dll
+AdbWinUsbApi.dll
+.mypy_cache
+.vscode
+screen.png
+/tmp
